@@ -1,33 +1,34 @@
--- make each files "knownn name" relative to current directory
-vim.cmd[[au bufnew * cd .]]
--- number for current line, relative number for other lines
-vim.opt.number = true vim.opt.relativenumber = true
--- highlight current line
-vim.opt.cursorline = true
--- single status line for all open splits
-vim.opt.laststatus = 3
--- column after line numbers to show stuff like git signs, folds etc
-vim.opt.signcolumn = "yes"
+vim.cmd[[au bufnew * cd .]] -- make each files "knownn name" relative to current directory
+vim.opt.number = true vim.opt.relativenumber = true -- number for current line, relative number for other lines
+vim.opt.cursorline = true -- highlight current line
+vim.opt.laststatus = 3 -- single status line for all open splits
+vim.opt.signcolumn = "yes" -- column after line numbers to show stuff like git signs, folds etc
 
 -- space/tabs muckery
-vim.opt.expandtab = true vim.opt.tabstop = 4 vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
 vim.opt.softtabstop = 4
+
 -- Override for buffer
 function SetSpaces(count)
-    vim.local_opt.shiftwidth = count
-    vim.local_opt.softtabstop = count
+    vim.opt_local.shiftwidth = count
+    vim.opt_local.softtabstop = count
 end
 -- For makefiles, use tab bytes
 vim.api.nvim_create_autocmd("FileType", {
     pattern = "make",
     callback = function()
-        vim.local_opt.expandtab = false   -- Use actual tabs instead of spaces
+        vim.opt_local.expandtab = false   -- Use actual tabs instead of spaces
     end
 })
 
--- stop nvim from trying to find a python context to set up its scripting
--- we get faster startup with this (since I don't have the python scripting engine installed)
-vim.g.loaded_python3_provider = 0
+-- open splits below and right instead of left and top
+vim.opt.splitbelow = true
+vim.opt.splitright = true
+vim.opt.virtualedit = 'block' -- selects rectangle even when there is no character there
+
+vim.g.loaded_python3_provider = 0 -- we get faster startup with this (since I don't have the python scripting engine installed) stops nvim from trying to find a python context to set up its scripting
 
 -- buffer input in command line
 function SelectBufferNative()
@@ -35,13 +36,11 @@ function SelectBufferNative()
     vim.api.nvim_input(':b ')
 end
 
--- set leader key to space
-vim.keymap.set({"n", "v"}, " ", "<Nop>", { silent = true, remap = false })
+vim.keymap.set({"n", "v"}, " ", "<Nop>", { silent = true, remap = false }) -- set leader key to space
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
--- tree UI
--- disable inbuilt file manager
+-- disable inbuilt file manager tree UI
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrw = 1
 
@@ -82,8 +81,7 @@ require("nvim-treesitter.configs").setup({
     indent = { enable = true },
 })
 
--- reset folds when opening file
-vim.opt.foldenable = false
+vim.opt.foldenable = false -- reset folds when opening file
 -- when calling any fold function, use treesitter based folding
 vim.opt.foldmethod = "expr"
 vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
@@ -95,15 +93,11 @@ require'gitsigns'.setup{}
 
 vim.cmd.colorscheme "catppuccin"
 
--- multiple cursors
-require('multiple-cursors').setup{}
-
 -- highlight colors like #c13121 rgb(100 100 100) (any css syntax) with the actual color
 require('nvim-highlight-colors').setup{}
 
 -- fuzzy find over anything
 require("fzf-lua").setup{
--- saw something about code actions here? see about that
 }
 
 -- custom autocmds, read the desc of each
@@ -205,8 +199,6 @@ require("quicker").setup({
     },
 })
 
-require('nvim-surround').setup{}
-
 -- Keymaps and Commands
 
 -- system clipboard yank/puts
@@ -222,13 +214,18 @@ end, { nargs = 1 })
 
 -- e.g :ToggleAutoSave
 vim.api.nvim_create_user_command('ToggleAutoSave', ToggleAutoSave, {})
+vim.api.nvim_create_user_command('ToggleLocalAutoSave', ToggleLocalAutoSave, {})
 
-vim.keymap.set('n', 'K', vim.lsp.buf.hover)
+vim.api.nvim_create_user_command('Diagnostics', function(opts)
+    vim.diagnostic.setqflist({
+        open = true,
+        severity = { min = tonumber(opts.args) or vim.diagnostic.severity.HINT }
+    })
+end, { nargs = '?' })
+
 vim.keymap.set({'n', 'v', 'i'}, '<c-f>', vim.lsp.buf.format)
 vim.keymap.set('n', 'gd', vim.lsp.buf.definition)
 vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition)
-vim.keymap.set('n', 'gs', vim.lsp.buf.signature_help)
-vim.keymap.set('n', 'gr', function() vim.cmd('FzfLua lsp_references') end)
 
 vim.keymap.set('n', ']c', function()
     if vim.wo.diff then
@@ -245,21 +242,10 @@ vim.keymap.set('n', '[c', function()
     end
 end)
 
-vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float)
-vim.keymap.set('n', '<leader>e', function() vim.cmd('Neotree toggle') end)
-vim.keymap.set('n', '<leader>ff', function() vim.cmd('FzfLua files') end)
-vim.keymap.set('n', '<leader>fb', function() vim.cmd('FzfLua buffers') end)
-vim.keymap.set('n', '<leader>fg', function() vim.cmd('FzfLua live_grep') end)
-vim.keymap.set('n', '<leader>lb', SelectBufferNative, { noremap = true, silent = true })
-vim.keymap.set('n', '<leader>q', function() require'quicker'.toggle() end)
-vim.keymap.set('n', '[q', ':cprev<cr>')
-vim.keymap.set('n', ']q', ':cnext<cr>')
-
-
 -- Flash search for any text
-vim.keymap.set({'n', 'x', 'o'}, '<CR>', function() require('flash').jump({jump = { pos = "end" } }) end)
+vim.keymap.set({'n', 'x', 'o'}, 's', function() require('flash').jump({jump = { pos = "end" } }) end)
 -- select labelled treesitter node(s)
-vim.keymap.set({'n', 'x', 'o'}, '<S-CR>', function() require('flash').treesitter() end)
+vim.keymap.set({'n', 'x', 'o'}, 'S', function() require('flash').treesitter() end)
 -- jump to labelled treesitter node
 vim.keymap.set({'n', 'x', 'o'}, 'Q', function() require('flash').treesitter({ jump = { pos = "end" } }) end)
 -- apply action in remote location e.g yr<flash search>iw and it restores cursor back here and you can paste iw can be
@@ -268,11 +254,27 @@ vim.keymap.set({'o'}, 'r', function() require('flash').remote() end)
 -- toggle for using flash-like search in regular / search
 vim.keymap.set({ 'c' }, '<c-s>', function() require('flash').toggle() end)
 
--- TODO: set fzf-lua up as required
+-- Keybinds
+vim.keymap.set('n', 'L', vim.diagnostic.open_float)
+vim.keymap.set('n', '<leader>e', function() vim.cmd('Neotree toggle') end)
+vim.keymap.set('n', '<leader>ff', function() vim.cmd('FzfLua files') end)
+vim.keymap.set('n', '<leader>b', SelectBufferNative, { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>q', function() require'quicker'.toggle({ min_height = 10, focus = true }) end)
+vim.keymap.set('n', '[q', ':cprev<cr>')
+vim.keymap.set('n', ']q', ':cnext<cr>')
+
+require('nvim-autopairs').setup{}
+
+-- TODO set fzf-lua, neo-tree up as required
 -- TODO fix document symbols thing: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1584
 -- TODO add call hierarchy to neotree as well: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1277
 -- TODO sessions :mksession thing
--- TODO Add custom textobjects, then add keybinds for treesitter-textobjects as appropriate, considering that flash already exists.
+-- TODO Add custom textobjects
+-- TODO nvim-treesitter-textobjects
 -- TODO emmet
 -- TODO inbuilt completion
--- TODO: multiple cursors keybinds + mouse click thing
+-- TODO multiple cursors
+-- TODO flash/leap/hop/syntax-tree-surfer/whatever, choose the right combination
+-- Should be possible to move to treesitter nodes really swiftly, as well as select in flash-ish fashion.
+-- However, have to see whether it's also worth it to add textobjects like function, parameter, if, etc
+-- TODO nvim-surround perhaps? or autopairs, one of these two, autopairs only probably.

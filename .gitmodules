@@ -55,3 +55,9 @@
 [submodule "neovim"]
 	path = neovim
 	url = ssh://git@github.com/neovim/neovim
+[submodule "pack/plugins/start/hop.nvim"]
+	path = pack/plugins/start/hop.nvim
+	url = https://github.com/smoka7/hop.nvim
+[submodule "pack/plugins/start/nvim-autopairs"]
+	path = pack/plugins/start/nvim-autopairs
+	url = https://github.com/windwp/nvim-autopairs
