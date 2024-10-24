@@ -1,0 +1,64 @@
+From 0520c47a9b8e5887cd2bd4ae06f7423eac234d51 Mon Sep 17 00:00:00 2001
+From: Santhanam <me@santhanam.dev>
+Date: Wed, 16 Oct 2024 22:36:40 +0530
+Subject: [PATCH 1/1] local patches
+
+---
+ lua/fzf-lua/providers/git.lua | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/lua/fzf-lua/providers/git.lua b/lua/fzf-lua/providers/git.lua
+index 4943bf4..b1979e4 100644
+--- a/lua/fzf-lua/providers/git.lua
++++ b/lua/fzf-lua/providers/git.lua
+@@ -135,20 +135,23 @@ M.bcommits = function(opts)
+   -- optimized to prevent the duplicate call to `git rev-parse`
+   -- but overall it's not a big deal as it's a pretty cheap call
+   -- first 'git_root' call won't print a warning to ':messages'
+   if not opts.cwd and not opts.git_dir then
+     opts.cwd = path.git_root({ cwd = vim.fn.expand("%:p:h") }, true)
+   end
+   local git_root = path.git_root(opts)
+   if not git_root then return end
+   local file = libuv.shellescape(path.relative_to(vim.fn.expand("%:p"), git_root))
+   local range
++  if opts.v then
++    vim.cmd [[norm gv]]
++  end
+   if utils.mode_is_visual() then
+     local _, sel = utils.get_visual_selection()
+     range = string.format("-L %d,%d:%s --no-patch", sel.start.line, sel["end"].line, file)
+   end
+   if opts.cmd:match("[<{]file") then
+     opts.cmd = opts.cmd:gsub("[<{]file[}>]", range or file)
+   else
+     opts.cmd = opts.cmd .. " " .. (range or file)
+   end
+   if type(opts.preview) == "string" then
+@@ -175,20 +178,23 @@ M.blame = function(opts)
+     return
+   end
+   -- See "bcommits" for comment
+   if not opts.cwd and not opts.git_dir then
+     opts.cwd = path.git_root({ cwd = vim.fn.expand("%:p:h") }, true)
+   end
+   local git_root = path.git_root(opts)
+   if not git_root then return end
+   local file = libuv.shellescape(path.relative_to(vim.fn.expand("%:p"), git_root))
+   local range
++  if opts.v then
++    vim.cmd [[norm gv]]
++  end
+   if utils.mode_is_visual() then
+     local _, sel = utils.get_visual_selection()
+     range = string.format("-L %d,%d %s", sel.start.line, sel["end"].line, file)
+   end
+   if opts.cmd:match("[<{]file") then
+     opts.cmd = opts.cmd:gsub("[<{]file[}>]", range or file)
+   else
+     opts.cmd = opts.cmd .. " " .. (range or file)
+   end
+   if type(opts.preview) == "string" then
+-- 
+2.47.0
+

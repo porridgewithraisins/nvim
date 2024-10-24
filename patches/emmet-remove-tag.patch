@@ -1,0 +1,82 @@
+From bd570e841f78b2a408a63f538e10c22c3508ce96 Mon Sep 17 00:00:00 2001
+From: Santhanam <me@santhanam.dev>
+Date: Tue, 22 Oct 2024 20:46:04 +0530
+Subject: [PATCH 1/1] local patches: remove only tags in removeTag
+
+---
+ autoload/emmet/lang/html.vim | 24 +++++++++++++++++++++---
+ 1 file changed, 21 insertions(+), 3 deletions(-)
+
+diff --git a/autoload/emmet/lang/html.vim b/autoload/emmet/lang/html.vim
+index 20bbf1c..bb107d3 100644
+--- a/autoload/emmet/lang/html.vim
++++ b/autoload/emmet/lang/html.vim
+@@ -142,21 +142,21 @@ function! emmet#lang#html#parseIntoTree(abbr, type) abort
+     endfor
+ 
+     if empty(tag_name)
+       let pname = len(parent.child) > 0 ? parent.child[0].name : ''
+       if !empty(pname) && has_key(pmap, pname) && custom == ''
+         let tag_name = pmap[pname]
+       elseif !empty(pname) && index(inlineLevel, pname) > -1
+         let tag_name = 'span'
+       elseif len(custom) == 0
+         let tag_name = 'div'
+-      elseif len(custom) != 0 && multiplier > 1	
++      elseif len(custom) != 0 && multiplier > 1
+         let tag_name = 'div'
+       else
+         let tag_name = custom
+       endif
+     endif
+ 
+     let basedirect = basevalue[1] ==# '-' ? -1 : 1
+     if basevalue != ''
+       let basevalue = 0 + abs(basevalue[1:])
+     else
+@@ -975,22 +975,40 @@ function! emmet#lang#html#removeTag() abort
+     let pos2 = searchpairpos('<'. tag_name[1:] . '\>[^/>]*>', '', '</' . tag_name[1:] . '>', 'W')
+   else
+     let pos2 = searchpairpos('<'. tag_name . '[^/>]*>', '', '</' . tag_name . '>', 'W')
+   endif
+   if pos2 == [0, 0]
+     return
+   endif
+   let pos2 = searchpos('>', 'neW')
+   let block = [pos1, pos2]
+   if emmet#util#pointInRegion(curpos[1:2], block)
+-    call emmet#util#setContent(block, '')
+-    call setpos('.', [0, block[0][0], block[0][1], 0])
++    let opening_tag_start = [block[0][0], block[0][1]]
++    call setpos('.', [0, opening_tag_start[0], opening_tag_start[1], 0])
++    let opening_tag_end = searchpos('>', 'neW')
++
++    let closing_tag_end = [block[1][0], block[1][1]]
++    call setpos('.', [0, closing_tag_end[0], closing_tag_end[1], 0])
++    let closing_tag_start = searchpos('</', 'nbW', closing_tag_end[0])
++
++    echomsg opening_tag_start "." opening_tag_end
++    echomsg closing_tag_start "." closing_tag_end
++    if opening_tag_end != [0, 0] && closing_tag_start != [0, 0]
++      let block_1 = [opening_tag_start, [opening_tag_end[0], opening_tag_end[1]]]
++      let block_2 = [closing_tag_start, [closing_tag_end[0], closing_tag_end[1]]]
++
++      echomsg block_1 "." block_2
++      call emmet#util#setContent(block_2, '')
++      call emmet#util#setContent(block_1, '')
++
++      call setpos('.', [0, closing_tag_start[0], closing_tag_start[1], 0])
++    endif
+     return
+   endif
+   if block[0][0] > 0
+     call setpos('.', [0, block[0][0]-1, block[0][1], 0])
+   else
+     call setpos('.', curpos)
+   endif
+ endfunction
+ 
+ function! emmet#lang#html#mergeLines() abort
+-- 
+2.47.0
+

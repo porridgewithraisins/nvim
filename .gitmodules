@@ -1,0 +1,72 @@
+[submodule "pack/plugins/start/catppuccin"]
+	path = pack/plugins/start/catppuccin
+	url = ssh://git@github.com/catppuccin/nvim
+[submodule "pack/plugins/start/flash.nvim"]
+	path = pack/plugins/start/flash.nvim
+	url = ssh://git@github.com/folke/flash.nvim
+[submodule "pack/plugins/start/fzf-lua"]
+	path = pack/plugins/start/fzf-lua
+	url = ssh://git@github.com/ibhagwan/fzf-lua
+[submodule "pack/plugins/start/gitsigns.nvim"]
+	path = pack/plugins/start/gitsigns.nvim
+	url = ssh://git@github.com/lewis6991/gitsigns.nvim
+[submodule "pack/plugins/start/neo-tree.nvim"]
+	path = pack/plugins/start/neo-tree.nvim
+	url = ssh://git@github.com/nvim-neo-tree/neo-tree.nvim
+[submodule "pack/plugins/start/nui.nvim"]
+	path = pack/plugins/start/nui.nvim
+	url = ssh://git@github.com/MunifTanjim/nui.nvim
+[submodule "pack/plugins/start/nvim-autopairs"]
+	path = pack/plugins/start/nvim-autopairs
+	url = ssh://git@github.com/windwp/nvim-autopairs
+[submodule "pack/plugins/start/nvim-bqf"]
+	path = pack/plugins/start/nvim-bqf
+	url = ssh://git@github.com/kevinhwang91/nvim-bqf
+[submodule "pack/plugins/start/nvim-lspconfig"]
+	path = pack/plugins/start/nvim-lspconfig
+	url = ssh://git@github.com/neovim/nvim-lspconfig
+[submodule "pack/plugins/start/nvim-lsp-file-operations"]
+	path = pack/plugins/start/nvim-lsp-file-operations
+	url = ssh://git@github.com/antosha417/nvim-lsp-file-operations
+[submodule "pack/plugins/start/nvim-treesitter"]
+	path = pack/plugins/start/nvim-treesitter
+	url = ssh://git@github.com/nvim-treesitter/nvim-treesitter
+[submodule "pack/plugins/start/nvim-treesitter-textobjects"]
+	path = pack/plugins/start/nvim-treesitter-textobjects
+	url = ssh://git@github.com/nvim-treesitter/nvim-treesitter-textobjects
+[submodule "pack/plugins/start/nvim-web-devicons"]
+	path = pack/plugins/start/nvim-web-devicons
+	url = ssh://git@github.com/nvim-tree/nvim-web-devicons
+[submodule "pack/plugins/start/plenary.nvim"]
+	path = pack/plugins/start/plenary.nvim
+	url = ssh://git@github.com/nvim-lua/plenary.nvim
+[submodule "pack/plugins/start/quicker.nvim"]
+	path = pack/plugins/start/quicker.nvim
+	url = ssh://git@github.com/stevearc/quicker.nvim
+[submodule "pack/plugins/start/vim-illuminate"]
+	path = pack/plugins/start/vim-illuminate
+	url = ssh://git@github.com/rrethy/vim-illuminate
+[submodule "pack/plugins/start/vim-repeat"]
+	path = pack/plugins/start/vim-repeat
+	url = ssh://git@github.com/tpope/vim-repeat
+[submodule "pack/plugins/start/vim-surround"]
+	path = pack/plugins/start/vim-surround
+	url = ssh://git@github.com/tpope/vim-surround
+[submodule "pack/plugins/opt/diffview.nvim"]
+	path = pack/plugins/opt/diffview.nvim
+	url = ssh://git@github.com/sindrets/diffview.nvim
+[submodule "pack/plugins/opt/emmet-vim"]
+	path = pack/plugins/opt/emmet-vim
+	url = ssh://git@github.com/mattn/emmet-vim
+[submodule "pack/plugins/opt/nvim-dap"]
+	path = pack/plugins/opt/nvim-dap
+	url = ssh://git@github.com/mfussenegger/nvim-dap
+[submodule "pack/plugins/opt/nvim-highlight-colors"]
+	path = pack/plugins/opt/nvim-highlight-colors
+	url = ssh://git@github.com/brenoprata10/nvim-highlight-colors
+[submodule "pack/plugins/opt/vim-startuptime"]
+	path = pack/plugins/opt/vim-startuptime
+	url = ssh://git@github.com/dstein64/vim-startuptime
+[submodule "neovim"]
+	path = neovim
+	url = ssh://git@github.com/neovim/neovim
