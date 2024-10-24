@@ -42,7 +42,6 @@ I suggest getting it anyway.
 ## Install
 
 TODO: project makefile that does everything
-TODO: dont forget about the git extension
 
 Clone this repository along with neovim and plugins
 ```bash
