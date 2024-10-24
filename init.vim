@@ -23,7 +23,7 @@ au General FocusGained * checktime
 au General VimResized * wincmd =
 au General FileType gitcommit,gitrebase,markdown,text,tex,log setlocal wrap spell textwidth=120
 au General TextYankPost * silent! lua vim.highlight.on_yank { higroup='Visual', timeout=300 }
-au BufNew * cd .
+au General BufNew * cd .
 set nofoldenable foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr() foldtext=v:lua.vim.treesitter.foldtext()
 lua << EOF
 require("nvim-treesitter.configs").setup({
@@ -72,13 +72,6 @@ packadd cfilter | packadd matchit | packadd nohlsearch | packadd justify
 lua << EOF
 require('gitsigns').setup{} require('nvim-autopairs').setup{}
 EOF
-
-" system clipboard access
-nnoremap <leader>yy "+yy
-nnoremap <leader>y "+y | vnoremap <leader>y "+y
-nnoremap <leader>p "+p | vnoremap <leader>p "+p
-nnoremap <leader>P "+p | vnoremap <leader>P "+P
-
 
 nnoremap [q :cprev<cr> | nnoremap ]q :cnext<cr>
 
@@ -269,3 +262,25 @@ require('neo-tree').setup {
 EOF
 
 if filereadable(".vimrc") | source .vimrc | endif
+
+" Taken from https://github.com/svban/YankAssassin.vim
+function! PreYankMotion()
+    let g:pre_yank_pos = getpos('.')
+    let g:yank_reg = empty(v:register) ? '"' : v:register
+endfunction
+
+function! YankWithoutMovingMapping(type)
+    let excl = &selection ==# 'exclusive' ? "\<right>" : ""
+
+    if a:type ==# 'char'      | let expr = "`[v`]"
+    elseif a:type ==# 'line'  | let expr = "'[v']"
+    elseif a:type ==# 'v'     | let expr = "`<v`>"
+    elseif a:type ==# 'V'     | let expr = "'<V'>"
+    else | return | endif
+
+    exe 'keepjumps norm! ' . expr . excl . '"' . g:yank_reg . 'y'
+    call setpos('.', g:pre_yank_pos)
+endfunction
+
+nnoremap <silent> y :call PreYankMotion()<cr>:set operatorfunc=YankWithoutMovingMapping<cr>g@
+xnoremap <silent> y "my"<CR>gv"y`y
