@@ -1,0 +1,32 @@
+
+/home/sandy/.config/nvim/pack                            
+└── plugins                                              
+    ├── opt                                              
+    │   ├── diffview.nvim                                 PR review / merge tool
+    │   ├── emmet-vim                                     emmet
+    │   ├── nvim-dap                                      debugger
+    │   ├── nvim-highlight-colors                         highlights css colors
+    │   └── vim-startuptime                               debug startup time
+    └── start                                            
+        ├── catppuccin                                    color scheme
+        ├── flash.nvim                                    A unique search/navigation tool
+        ├── fzf-lua                                       Fuzzy finder over anything
+        ├── gitsigns.nvim                                 Good git integration
+        ├── neo-tree.nvim                                 tree UI for files/symbols/call hierarchy/etc
+        ├── nui.nvim                                      dependency, some UI widgets
+        ├── nvim-autopairs                                auto enter closing when you enter opening (quote, bracket, whatever)
+        ├── nvim-bqf                                      quickfix enhancement
+        ├── nvim-lspconfig                                basically inbuilt
+        ├── nvim-lsp-file-operations                      basically inbuilt
+        ├── nvim-treesitter                               basically inbuilt
+        ├── nvim-treesitter-textobjects                   basically inbuilt
+        ├── nvim-web-devicons                             icons
+        ├── plenary.nvim                                  dependency, some basic util functions (string functions etc)
+        ├── quicker.nvim                                  another quickfix enhancement
+        ├── vim-illuminate                                highlight same word, move between them
+        ├── vim-repeat                                    dependency, allows plugins to tap into dot-repeat
+        └── vim-surround                                  surround text with quotes, brackets, html/xml tag, etc
+
+Remaining:
+ - Yank history
+ - Maybe we need something for completion if inbuilt one has some warts, or something custom coded atleast
