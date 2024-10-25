@@ -225,6 +225,14 @@ require("quicker").setup({
         },
     },
 })
+vim.keymap.set('n', '<leader>q', function()
+    if vim.bo.buftype == "quickfix" then
+        require 'quicker'.close()
+    else
+        require 'quicker'.open({ min_height = 10, focus = true })
+    end
+end)
+
 EOF
 
 lua << EOF
@@ -262,25 +270,3 @@ require('neo-tree').setup {
 EOF
 
 if filereadable(".vimrc") | source .vimrc | endif
-
-" Taken from https://github.com/svban/YankAssassin.vim
-function! PreYankMotion()
-    let g:pre_yank_pos = getpos('.')
-    let g:yank_reg = empty(v:register) ? '"' : v:register
-endfunction
-
-function! YankWithoutMovingMapping(type)
-    let excl = &selection ==# 'exclusive' ? "\<right>" : ""
-
-    if a:type ==# 'char'      | let expr = "`[v`]"
-    elseif a:type ==# 'line'  | let expr = "'[v']"
-    elseif a:type ==# 'v'     | let expr = "`<v`>"
-    elseif a:type ==# 'V'     | let expr = "'<V'>"
-    else | return | endif
-
-    exe 'keepjumps norm! ' . expr . excl . '"' . g:yank_reg . 'y'
-    call setpos('.', g:pre_yank_pos)
-endfunction
-
-nnoremap <silent> y :call PreYankMotion()<cr>:set operatorfunc=YankWithoutMovingMapping<cr>g@
-xnoremap <silent> y "my"<CR>gv"y`y
