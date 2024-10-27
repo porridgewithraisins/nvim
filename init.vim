@@ -7,18 +7,15 @@ augroup END
 
 " resets
 set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block
-set smartcase ignorecase undofile nowrap nospell
+set smartcase ignorecase infercase undofile nowrap nospell
 let g:loaded_python3_provider = 0
 let g:loaded_ruby_provider = 0
 let g:loaded_netrwPlugin = 1
 let g:loaded_netrw = 1
 au General BufReadPost *
-  \ let excluded_filetypes = ['gitcommit', 'gitrebase', 'log'] |
-  \ if index(excluded_filetypes, &filetype) == -1 |
-  \   if line("'\"") > 1 && line("'\"") <= line('$') |
-  \     silent! normal! g`" |
-  \   endif |
-  \ endif |
+            \ if index(['gitcommit', 'gitrebase', 'log'], &filetype) == -1 && line("'\"") > 0 && line("'\"") <= line("$") |
+            \   exe "normal g'\"" |
+            \ endif
 au General FocusGained * checktime
 au General VimResized * wincmd =
 au General FileType gitcommit,gitrebase,markdown,text,tex,log setlocal wrap spell textwidth=120
@@ -130,8 +127,6 @@ endfunction
 if IsGitWorkTree() == 0
   set grepprg=git\ grep\ -n\ $*
 else
-  " TODO fallback to grep if rg doesn't exist
-  " make the logic like --- if grepprg is currently rg, remove -uu option
   set grepprg=rg\ --vimgrep "I don't want the uu thing.
 endif
 
@@ -142,6 +137,8 @@ endfunction
 command! -nargs=+ -complete=file_in_path -bar Grep cgetexpr Grep(<f-args>)
 
 cnoreabbrev <expr> grep  (getcmdtype() ==# ':' && getcmdline() ==# 'grep')  ? 'Grep'  : 'grep'
+
+nmap <leader>g :Grep <c-r><c-w><cr>
 
 augroup Quickfix
     au!
@@ -187,7 +184,7 @@ EOF
 lua << EOF
 vim.keymap.set({ 'n', 'v', 'i' }, '<c-f>', vim.lsp.buf.format)
 vim.keymap.set('n', 'gd', vim.lsp.buf.definition)
-vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition)
+vim.keymap.set('n', 'gy', vim.lsp.buf.type_definition)
 vim.keymap.set('n', ']c', function()
     if vim.wo.diff then
         vim.cmd.normal({ ']c', bang = true })
@@ -270,3 +267,51 @@ require('neo-tree').setup {
 EOF
 
 if filereadable(".vimrc") | source .vimrc | endif
+
+function! ToggleRegisterType()
+    let current_type = getregtype('"')
+    if current_type ==# 'v'
+        call setreg('"', trim(getreg('"'), " "), 'l')
+    else
+        call setreg('"', trim(getreg('"'), "\n"), 'c')
+    endif
+endfunction
+
+nnoremap <leader>p :call ToggleRegisterType()<cr>
+
+noremap <M-j> 4j | noremap <M-k> 4k | noremap <M-l> 4l | noremap <M-h> 4h
+set whichwrap+=<,>,h,l,[,]
+
+set dictionary=/usr/share/dict/words thesaurus=~/.config/nvim/thesaurus.txt
+inoremap <C-space> <C-x>
+
+inoremap <c-u> <c-g>u<c-u> | inoremap <c-w> <c-g>u<c-w>
+
+" better window resizing, just do c-w >>>>>>>> keyboard smash! instead of c-w
+" everytime
+nmap <C-W>+ <C-W>+<SID>ws | nmap <C-W>- <C-W>-<SID>ws
+nmap <C-W>> <C-W>><SID>ws | nmap <C-W>< <C-W><<SID>ws
+nnoremap <script> <SID>ws+ 10<C-W>+<SID>ws | nnoremap <script> <SID>ws- 10<C-W>-<SID>ws
+nnoremap <script> <SID>ws> 10<C-W>><SID>ws | nnoremap <script> <SID>ws< 10<C-W><<SID>ws
+nmap <SID>ws <Nop>
+
+command! -bang QA if tabpagenr('$') > 1 | exec 'tabclose<bang>' | else | exec 'qa<bang>' | endif
+command! -bang QAA exec 'qa<bang>'
+cnoreabbrev <expr> qa 'QA'
+
+" TODO ino <c-f> <c-o>:exe "norm! ky0jVP$"<cr>
+" TODO nnoremap gs :%s~~ | vnoremap gs :%s~~
+" TODO https://github.com/tomtom/tinykeymap_vim
+" TODO camelCase thing
+" TODO set fzf-lua up as required
+" TODO fix document symbols thing: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1584
+" TODO add call hierarchy to neotree as well: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1277
+" TODO nvim-treesitter-textobjects
+" TODO completion
+" TODO multiple cursors
+" TODO flash/leap/hop/syntax-tree-surfer/whatever, choose the right combination
+" TODO snippets
+" TODO latex tables
+" TODO fallback to grep if rg doesn't exist, make the logic like --- if grepprg is currently rg, remove -uu option
+" TODO make a HTML LSP that forwards to css lsp and js lsp, or even embeds
+" them if needs be

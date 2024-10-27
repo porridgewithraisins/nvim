@@ -73,3 +73,9 @@
 [submodule "pack/plugins/opt/nvim-ts-autotag"]
 	path = pack/plugins/opt/nvim-ts-autotag
 	url = https://github.com/windwp/nvim-ts-autotag
+[submodule "pack/plugins/opt/vim-abolish"]
+	path = pack/plugins/opt/vim-abolish
+	url = https://github.com/tpope/vim-abolish
+[submodule "pack/plugins/opt/vim-asterisk"]
+	path = pack/plugins/opt/vim-asterisk
+	url = https://github.com/haya14busa/vim-asterisk
