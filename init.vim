@@ -21,6 +21,12 @@ au General VimResized * wincmd =
 au General FileType gitcommit,gitrebase,markdown,text,tex,log setlocal wrap spell textwidth=120
 au General TextYankPost * silent! lua vim.highlight.on_yank { higroup='Visual', timeout=300 }
 au General BufNew * cd .
+au General BufEnter,FocusGained,InsertLeave * if &buftype != 'quickfix' | set relativenumber | endif
+au General BufLeave,FocusLost,InsertEnter   * if &buftype != 'quickfix' | set norelativenumber | endif
+au General FileType gitcommit set textwidth=72
+au General FileType gitcommit set colorcolumn=73
+au General FileType gitcommit 1 | startinsert
+
 set nofoldenable foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr() foldtext=v:lua.vim.treesitter.foldtext()
 lua << EOF
 require("nvim-treesitter.configs").setup({
@@ -148,10 +154,12 @@ augroup END
 
 silent !mkdir -p ~/.cache/nvim/sessions
 function! GetSessionFile()
-    let l:cwd = expand('%:p:h')
     let l:branch = substitute(system("git rev-parse --abbrev-ref HEAD 2>/dev/null"), '\n\+$', '', '')
-    let l:encoded = substitute(l:cwd, '/', '_', 'g') . '__' . l:branch
-    return '~/.cache/nvim/sessions/' . l:encoded . '.vim'
+    if l:branch != ''
+        return "./.git/session" . ":" . l:branch . ".vim"
+    else
+        return "~/.cache/nvim/sessions/" . substitute(expand('%:p:h'), '/', '_', 'g') . '.vim'
+    endif
 endfunction
 
 function! ShouldRunSessionAutocmd()
@@ -162,7 +170,7 @@ if $NVIM_USE_SESSIONS != ''
     command! ClearSession execute '!rm ' . GetSessionFile()
     augroup Sessions
         au
-        au VimLeave * if ShouldRunSessionAutocmd() | execute 'mksession! ' . GetSessionFile() | endif
+        au BufEnter,VimLeave * if ShouldRunSessionAutocmd() | execute 'mksession! ' . GetSessionFile() | endif
         au VimEnter * ++nested if ShouldRunSessionAutocmd() | silent! execute 'source ' . GetSessionFile() | endif
     augroup END
 endif
@@ -299,8 +307,8 @@ command! -bang QA if tabpagenr('$') > 1 | exec 'tabclose<bang>' | else | exec 'q
 command! -bang QAA exec 'qa<bang>'
 cnoreabbrev <expr> qa 'QA'
 
-" TODO ino <c-f> <c-o>:exe "norm! ky0jVP$"<cr>
-" TODO nnoremap gs :%s~~ | vnoremap gs :%s~~
+command! -nargs=1 -complete=file WriteQF execute writefile([json_encode(getqflist({'all': 1}))], <f-args>)
+command! -nargs=1 -complete=file ReadQF call setqflist([], ' ', json_decode(get(readfile(<f-args>), 0, '')))
 " TODO https://github.com/tomtom/tinykeymap_vim
 " TODO camelCase thing
 " TODO set fzf-lua up as required
