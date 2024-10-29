@@ -1,17 +1,9 @@
-if argc() == 1 && isdirectory(argv(0))
-    cd `=argv(0)`
-endif
-augroup General
-    au!
-augroup END
+if argc() == 1 && isdirectory(argv(0)) | cd `=argv(0)` | endif
+augroup General | au! | augroup END
 
-" resets
 set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block
-set smartcase ignorecase infercase undofile nowrap nospell
-let g:loaded_python3_provider = 0
-let g:loaded_ruby_provider = 0
-let g:loaded_netrwPlugin = 1
-let g:loaded_netrw = 1
+set smartcase ignorecase infercase undofile nowrap nospell pumblend=10 cmdheight=0 showcmdloc=statusline spelloptions+=camel
+let g:loaded_python3_provider = 0 | let g:loaded_ruby_provider = 0 | let g:loaded_netrwPlugin = 1 | let g:loaded_netrw = 1
 au General BufReadPost *
             \ if index(['gitcommit', 'gitrebase', 'log'], &filetype) == -1 && line("'\"") > 0 && line("'\"") <= line("$") |
             \   exe "normal g'\"" |
@@ -19,13 +11,13 @@ au General BufReadPost *
 au General FocusGained * checktime
 au General VimResized * wincmd =
 au General FileType gitcommit,gitrebase,markdown,text,tex,log setlocal wrap spell textwidth=120
-au General TextYankPost * silent! lua vim.highlight.on_yank { higroup='Visual', timeout=300 }
+au General TextYankPost * silent! lua vim.highlight.on_yank { higroup='IncSearch', timeout=300 }
 au General BufNew * cd .
 au General BufEnter,FocusGained,InsertLeave * if &buftype != 'quickfix' | set relativenumber | endif
 au General BufLeave,FocusLost,InsertEnter   * if &buftype != 'quickfix' | set norelativenumber | endif
-au General FileType gitcommit set textwidth=72
-au General FileType gitcommit set colorcolumn=73
-au General FileType gitcommit 1 | startinsert
+au General FileType gitcommit setlocal textwidth=72 colorcolumn=73 noundofile
+au General FileType gitcommit silent 1 | startinsert
+au General TermOpen * startinsert
 
 set nofoldenable foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr() foldtext=v:lua.vim.treesitter.foldtext()
 lua << EOF
@@ -166,7 +158,7 @@ function! ShouldRunSessionAutocmd()
     return argc() == 0 || (argc() == 1 && isdirectory(argv(0)))
 endfunction
 
-if $NVIM_USE_SESSIONS != ''
+if $NVIM_USE_SESSIONS != '' " TODO did this while developing, make this proper with runtime check later
     command! ClearSession execute '!rm ' . GetSessionFile()
     augroup Sessions
         au
@@ -210,12 +202,6 @@ end)
 EOF
 
 
-lua << EOF
-require("lsp-file-operations").setup {}
-for _, lsp in ipairs({ "pylsp", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls" }) do
-    require 'lspconfig'[lsp].setup {}
-end
-EOF
 
 lua << EOF
 require('bqf').setup { preview = { auto_preview = false } }
@@ -274,7 +260,18 @@ require('neo-tree').setup {
 }
 EOF
 
+lua << EOF
+require("lsp-file-operations").setup {}
+local capabilities = vim.lsp.protocol.make_client_capabilities() -- TODO: get rid of this once its part of neovim
+capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true -- TODO: remove this once its the default
+capabilities = vim.tbl_deep_extend('force', capabilities, require'lsp-file-operations'.default_capabilities())
+for _, lsp in ipairs({ "pylsp", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls" }) do
+    require 'lspconfig'[lsp].setup {capabilities}
+end
+EOF
+
 if filereadable(".vimrc") | source .vimrc | endif
+if filereadable(".nvimrc") | source .nvimrc | endif
 
 function! ToggleRegisterType()
     let current_type = getregtype('"')
@@ -288,11 +285,8 @@ endfunction
 nnoremap <leader>p :call ToggleRegisterType()<cr>
 
 noremap <M-j> 4j | noremap <M-k> 4k | noremap <M-l> 4l | noremap <M-h> 4h
-set whichwrap+=<,>,h,l,[,]
 
 set dictionary=/usr/share/dict/words thesaurus=~/.config/nvim/thesaurus.txt
-inoremap <C-space> <C-x>
-
 inoremap <c-u> <c-g>u<c-u> | inoremap <c-w> <c-g>u<c-w>
 
 " better window resizing, just do c-w >>>>>>>> keyboard smash! instead of c-w
@@ -309,16 +303,31 @@ cnoreabbrev <expr> qa 'QA'
 
 command! -nargs=1 -complete=file WriteQF execute writefile([json_encode(getqflist({'all': 1}))], <f-args>)
 command! -nargs=1 -complete=file ReadQF call setqflist([], ' ', json_decode(get(readfile(<f-args>), 0, '')))
-" TODO https://github.com/tomtom/tinykeymap_vim
-" TODO camelCase thing
+
+set completeopt=menu,fuzzy,menuone,popup,noinsert,noselect
+
+lua << EOF
+vim.g.linefly_options = {
+    winbar = true,
+    with_indent_status = true, with_macro_status = true, with_search_count = true,
+    with_lsp_status = true, with_attached_clients = false, with_git_status = false,
+}
+EOF
+
+tnoremap <expr> <C-r> '<C-\><C-N>"'.nr2char(getchar()).'pi'
+
+" TODO consider https://github.com/tomtom/tinykeymap_vim
+" TODO consider camelCase textobjects etc
 " TODO set fzf-lua up as required
+" Need to figure out how to send selected items only to quickfix list
 " TODO fix document symbols thing: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1584
 " TODO add call hierarchy to neotree as well: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1277
 " TODO nvim-treesitter-textobjects
-" TODO completion
+" TODO yank history in FZF
+" TODO undotree in neo-tree
+" TODO completion -- nearly done
 " TODO multiple cursors
 " TODO flash/leap/hop/syntax-tree-surfer/whatever, choose the right combination
-" TODO snippets
 " TODO latex tables
 " TODO fallback to grep if rg doesn't exist, make the logic like --- if grepprg is currently rg, remove -uu option
 " TODO make a HTML LSP that forwards to css lsp and js lsp, or even embeds

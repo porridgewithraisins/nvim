@@ -79,3 +79,6 @@
 [submodule "pack/plugins/opt/vim-asterisk"]
 	path = pack/plugins/opt/vim-asterisk
 	url = https://github.com/haya14busa/vim-asterisk
+[submodule "pack/plugins/start/nvim-linefly"]
+	path = pack/plugins/start/nvim-linefly
+	url = https://github.com/bluz71/nvim-linefly
