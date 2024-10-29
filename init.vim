@@ -3,6 +3,7 @@ augroup General | au! | augroup END
 
 set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block shiftround
 set smartcase ignorecase infercase undofile nowrap nospell pumblend=10 cmdheight=0 showcmdloc=statusline spelloptions+=camel
+set expandtab shiftwidth=4 softtabstop=4
 let g:loaded_python3_provider = 0 | let g:loaded_ruby_provider = 0 | let g:loaded_netrwPlugin = 1 | let g:loaded_netrw = 1
 au General BufReadPost *
             \ if index(['gitcommit', 'gitrebase', 'log'], &filetype) == -1 && line("'\"") > 0 && line("'\"") <= line("$") |
@@ -10,13 +11,12 @@ au General BufReadPost *
             \ endif
 au General FocusGained * checktime
 au General VimResized * wincmd =
-au General FileType gitcommit,gitrebase,markdown,text,tex,log setlocal wrap spell textwidth=120
+au General FileType gitcommit,gitrebase,markdown,text,tex,log setlocal wrap spell
 au General TextYankPost * silent! lua vim.highlight.on_yank { higroup='IncSearch', timeout=300 }
 au General BufNew * cd .
 au General BufEnter,FocusGained,InsertLeave * if &buftype != 'quickfix' | set relativenumber | endif
 au General BufLeave,FocusLost,InsertEnter   * if &buftype != 'quickfix' | set norelativenumber | endif
-au General FileType gitcommit setlocal textwidth=72 colorcolumn=73 noundofile
-au General FileType gitcommit silent 1 | startinsert
+au General FileType gitcommit setlocal noundofile colorcolumn=+1 | silent 1 | startinsert
 au General TermOpen * startinsert
 
 set nofoldenable foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr() foldtext=v:lua.vim.treesitter.foldtext()
@@ -67,10 +67,10 @@ set runtimepath+=/usr/share/vim/vimfiles
 packadd cfilter | packadd matchit | packadd nohlsearch | packadd justify
 
 lua << EOF
-require('gitsigns').setup{} require('nvim-autopairs').setup{}
+require('gitsigns').setup{}
+require('nvim-autopairs').setup{}
 EOF
 
-nnoremap [q :cprev<cr> | nnoremap ]q :cnext<cr>
 
 " 28 simple pseudo-text objects
 " -----------------------------
@@ -115,19 +115,20 @@ xnoremap ix a"oB | onoremap ix :<C-u>normal vix<CR>
 xnoremap ax a"oBh | onoremap ax :<C-u>normal vax<CR>
 
 function! IsGitWorkTree()
-  let l:git=1
   let l:stdout = system("git rev-parse --git-dir 2> /dev/null")
   if l:stdout =~# '\.git'
-    let l:git=0
+    return 1
   endif
-  return l:git
+  return 0
 endfunction
 
 " keep default grepprg if not inside git dir, otherwise switch to git grep
-if IsGitWorkTree() == 0
-  set grepprg=git\ grep\ -n\ $*
+if IsGitWorkTree()
+    set grepprg=git\ grep\ -n\ $*
+elseif executable('rg')
+    set grepprg=rg\ --vimgrep "I don't want the uu thing.
 else
-  set grepprg=rg\ --vimgrep "I don't want the uu thing.
+    set grepprg=grep -HIn $* /dev/null
 endif
 
 function! Grep(...)
@@ -138,7 +139,7 @@ command! -nargs=+ -complete=file_in_path -bar Grep cgetexpr Grep(<f-args>)
 
 cnoreabbrev <expr> grep  (getcmdtype() ==# ':' && getcmdline() ==# 'grep')  ? 'Grep'  : 'grep'
 
-nmap <leader>g :Grep <c-r><c-w><cr>
+nmap <leader>g :Grep <c-r><c-w><CR>
 
 augroup Quickfix
     au!
@@ -169,9 +170,9 @@ if $NVIM_USE_SESSIONS != '' " TODO did this while developing, make this proper w
     augroup END
 endif
 
-nnoremap <leader>e :Neotree toggle<CR>
-nnoremap <leader>ff :FzfLua files<CR>
-nnoremap <leader>b :ls<CR>:b
+nnoremap <leader>e <Cmd>Neotree toggle<CR>
+nnoremap <leader>ff <Cmd>FzfLua files<CR>
+nnoremap <leader>b <Cmd>ls<CR>:b <Right>
 
 lua << EOF
 vim.api.nvim_create_user_command('Diagnostics', function(opts)
@@ -183,27 +184,12 @@ end, { nargs = '?' })
 vim.keymap.set('n', 'L', vim.diagnostic.open_float)
 EOF
 
-lua << EOF
-vim.keymap.set({ 'n', 'v', 'i' }, '<c-f>', vim.lsp.buf.format)
-vim.keymap.set('n', 'gd', vim.lsp.buf.definition)
-vim.keymap.set('n', 'gy', vim.lsp.buf.type_definition)
-vim.keymap.set('n', ']c', function()
-    if vim.wo.diff then
-        vim.cmd.normal({ ']c', bang = true })
-    else
-        require 'gitsigns'.nav_hunk('next')
-    end
-end)
-vim.keymap.set('n', '[c', function()
-    if vim.wo.diff then
-        vim.cmd.normal({ '[c', bang = true })
-    else
-        require 'gitsigns'.nav_hunk('prev')
-    end
-end)
-EOF
-
-
+nmap gd <C-]>
+nnoremap gy <Cmd>lua vim.lsp.buf.type_definition()<CR>
+noremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
+inoremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
+nnoremap ]c :if &diff <Bar> execute 'normal! ]c' <Bar> else <Bar> silent execute 'Gitsigns next_hunk' <Bar> endif<CR>
+nnoremap [c :if &diff <Bar> execute 'normal! [c' <Bar> else <Bar> silent execute 'Gitsigns prev_hunk' <Bar> endif<CR>
 
 lua << EOF
 require('bqf').setup { preview = { auto_preview = false } }
@@ -283,7 +269,7 @@ function! ToggleRegisterType()
     endif
 endfunction
 
-nnoremap <leader>p :call ToggleRegisterType()<cr>
+nnoremap <leader>p <Cmd>call ToggleRegisterType()<cr>
 
 noremap <M-j> 4j | noremap <M-k> 4k | noremap <M-l> 4l | noremap <M-h> 4h
 
@@ -307,13 +293,11 @@ command! -nargs=1 -complete=file ReadQF call setqflist([], ' ', json_decode(get(
 
 set completeopt=menu,fuzzy,menuone,popup,noinsert,noselect
 
-lua << EOF
-vim.g.linefly_options = {
-    winbar = true,
-    with_indent_status = true, with_macro_status = true, with_search_count = true,
-    with_lsp_status = true, with_attached_clients = false, with_git_status = false,
-}
-EOF
+let g:linefly_options = {
+    \ 'winbar': v:true,
+    \ 'with_indent_status': v:true, 'with_macro_status': v:true, 'with_search_count': v:true,
+    \ 'with_lsp_status': v:true, 'with_attached_clients': v:false, 'with_git_status': v:false,
+\ }
 
 tnoremap <expr> <C-r> '<C-\><C-N>"'.nr2char(getchar()).'pi'
 
