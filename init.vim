@@ -1,7 +1,7 @@
 if argc() == 1 && isdirectory(argv(0)) | cd `=argv(0)` | endif
 augroup General | au! | augroup END
 
-set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block
+set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block shiftround
 set smartcase ignorecase infercase undofile nowrap nospell pumblend=10 cmdheight=0 showcmdloc=statusline spelloptions+=camel
 let g:loaded_python3_provider = 0 | let g:loaded_ruby_provider = 0 | let g:loaded_netrwPlugin = 1 | let g:loaded_netrw = 1
 au General BufReadPost *
@@ -28,9 +28,6 @@ require("nvim-treesitter.configs").setup({
 })
 EOF
 
-" space tabs muckery
-set expandtab tabstop=4 shiftwidth=4 softtabstop=4
-au General FileType make setlocal noexpandtab
 command! -nargs=1 SetSpaces setlocal shiftwidth=<args> softtabstop=<args>
 
 " colors
@@ -40,12 +37,17 @@ au General VimEnter,Syntax *
             \ highlight clear todo |
             \ highlight link todo DiagnosticUnderlineWarn
 
+" show all the tabs in the file visually underlined
+command TabHighlight syntax match Tab /\t/ | highlight link Tab Underlined
+
 set wildignore+=**/node_modules/**,**/venv/**,**/__pycache__/**,**/dist/**,**/build/**,**/target/**
 
 " leader key to space
 let mapleader = " "
 let maplocalleader = " "
 silent! nnoremap <space> <nop>
+
+:map ' `
 
 let g:autosave_enabled = 0
 let g:autosave_per_buffer = {}
@@ -270,8 +272,7 @@ for _, lsp in ipairs({ "pylsp", "gopls", "ts_ls", "ccls", "bashls", "marksman", 
 end
 EOF
 
-if filereadable(".vimrc") | source .vimrc | endif
-if filereadable(".nvimrc") | source .nvimrc | endif
+if filereadable(".git/.vimrc") | source .git/.vimrc | endif | if filereadable(".git/.nvimrc") | source .git/.nvimrc | endif
 
 function! ToggleRegisterType()
     let current_type = getregtype('"')
