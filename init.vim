@@ -71,48 +71,8 @@ require('gitsigns').setup{}
 require('nvim-autopairs').setup{}
 EOF
 
-
-" 28 simple pseudo-text objects
-" -----------------------------
-" i_ i. i: i, i; i| i/ i\ i* i+ i- i# i$ i%
-" a_ a. a: a, a; a| a/ a\ a* a+ a- a# a$ a%
-" can take a count: 2i: 3a/
-for char in [ '_', '.', ':', ',', ';', '<bar>', '/', '<bslash>', '*', '+', '-', '#', '$', '%']
-    execute "xnoremap i" . char . " :<C-u>execute 'normal! ' . v:count1 . 'T" . char . "v' . (v:count1 + (v:count1 - 1)) . 't" . char . "'<CR>"
-    execute "onoremap i" . char . " :normal vi" . char . "<CR>"
-    execute "xnoremap a" . char . " :<C-u>execute 'normal! ' . v:count1 . 'F" . char . "v' . (v:count1 + (v:count1 - 1)) . 'f" . char . "'<CR>"
-    execute "onoremap a" . char . " :normal va" . char . "<CR>"
-endfor
-
-" Number pseudo-text object (integer and float)
-" ---------------------------------------------
-" in
-function! VisualNumber()
-    call search('\d\([^0-9\.]\|$\)', 'cW')
-    normal v
-    call search('\(^\|[^0-9\.]\d\)', 'becW')
-endfunction
 xnoremap in :<C-u>call VisualNumber()<CR> | onoremap in :<C-u>normal vin<CR>
-" Block comment pseudo-text objects
-" ---------------------------------
-" i? a?
-xnoremap a? [*o]* | onoremap a? :<C-u>normal va?V<CR>
-xnoremap i? [*jo]*k | onoremap i? :<C-u>normal vi?V<CR>
-" C comment pseudo-text object
-" ----------------------------
-" i? a?
-xnoremap i? [*jo]*k | onoremap i? :<C-u>normal vi?V<CR>
-xnoremap a? [*o]* | onoremap a? :<C-u>normal va?V<CR>
-" Last change pseudo-text objects
-" -----------------------------------
-" ik ak
-xnoremap ik ` | onoremap ik :<C-u>normal vik<CR>
-onoremap ak :<C-u>normal vikV<CR>
-" XML/HTML/etc. attribute pseudo-text object
-" ------------------------------------------
-" ix ax
-xnoremap ix a"oB | onoremap ix :<C-u>normal vix<CR>
-xnoremap ax a"oBh | onoremap ax :<C-u>normal vax<CR>
+xnoremap ih :<C-u>Gitsigns select_hunk<CR> | onoremap ih :<C-u>Gitsigns select_hunk<CR>
 
 function! IsGitWorkTree()
   let l:stdout = system("git rev-parse --git-dir 2> /dev/null")
@@ -128,7 +88,7 @@ if IsGitWorkTree()
 elseif executable('rg')
     set grepprg=rg\ --vimgrep "I don't want the uu thing.
 else
-    set grepprg=grep -HIn $* /dev/null
+    set grepprg=grep\ -HIn\ $*\ /dev/null
 endif
 
 function! Grep(...)
@@ -229,7 +189,9 @@ vim.keymap.set({ 'c' }, '<c-s>', function() require('flash').toggle() end)
 EOF
 
 lua << EOF
-require'fzf-lua'.setup{}
+require'fzf-lua'.setup {
+    fzf_opts = { ['--history'] = vim.fn.stdpath("data") .. '/fzf-lua-history' },
+}
 require('neo-tree').setup {
     window = { width = 30 },
     filesystem = {
@@ -277,7 +239,7 @@ set dictionary=/usr/share/dict/words thesaurus=~/.config/nvim/thesaurus.txt
 inoremap <c-u> <c-g>u<c-u> | inoremap <c-w> <c-g>u<c-w>
 
 " better window resizing, just do c-w >>>>>>>> keyboard smash! instead of c-w
-" everytime
+" everytime. TODO - explore tinykeymap here
 nmap <C-W>+ <C-W>+<SID>ws | nmap <C-W>- <C-W>-<SID>ws
 nmap <C-W>> <C-W>><SID>ws | nmap <C-W>< <C-W><<SID>ws
 nnoremap <script> <SID>ws+ 10<C-W>+<SID>ws | nnoremap <script> <SID>ws- 10<C-W>-<SID>ws
@@ -302,7 +264,6 @@ let g:linefly_options = {
 tnoremap <expr> <C-r> '<C-\><C-N>"'.nr2char(getchar()).'pi'
 
 " TODO consider https://github.com/tomtom/tinykeymap_vim
-" TODO consider camelCase textobjects etc
 " TODO set fzf-lua up as required
 " Need to figure out how to send selected items only to quickfix list
 " TODO fix document symbols thing: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1584
@@ -313,7 +274,7 @@ tnoremap <expr> <C-r> '<C-\><C-N>"'.nr2char(getchar()).'pi'
 " TODO completion -- nearly done
 " TODO multiple cursors
 " TODO flash/leap/hop/syntax-tree-surfer/whatever, choose the right combination
-" TODO latex tables
 " TODO fallback to grep if rg doesn't exist, make the logic like --- if grepprg is currently rg, remove -uu option
 " TODO make a HTML LSP that forwards to css lsp and js lsp, or even embeds
 " them if needs be
+" TODO use fzf_exec in some nice way and also complete=true in some nice way
