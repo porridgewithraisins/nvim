@@ -1,4 +1,5 @@
 if argc() == 1 && isdirectory(argv(0)) | cd `=argv(0)` | endif
+lua vim.loader.enable()
 augroup General | au! | augroup END
 
 set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block shiftround
@@ -14,8 +15,8 @@ au General VimResized * wincmd =
 au General FileType gitcommit,gitrebase,markdown,text,tex,log setlocal wrap spell
 au General TextYankPost * silent! lua vim.highlight.on_yank { higroup='IncSearch', timeout=300 }
 au General BufNew * cd .
-au General BufEnter,FocusGained,InsertLeave * if &buftype != 'quickfix' | set relativenumber | endif
-au General BufLeave,FocusLost,InsertEnter   * if &buftype != 'quickfix' | set norelativenumber | endif
+au General BufEnter,FocusGained * if &buftype != 'quickfix' | set relativenumber | endif
+au General BufLeave,FocusLost * if &buftype != 'quickfix' | set norelativenumber | endif
 au General FileType gitcommit setlocal noundofile colorcolumn=+1 | silent 1 | startinsert
 au General TermOpen * startinsert
 
@@ -33,12 +34,10 @@ command! -nargs=1 SetSpaces setlocal shiftwidth=<args> softtabstop=<args>
 " colors
 colorscheme catppuccin
 au General VimEnter,Syntax *
-            \ syntax keyword todo TODO FIXME NOTE XXX |
-            \ highlight clear todo |
-            \ highlight link todo DiagnosticUnderlineWarn
+            \ syntax keyword Todo TODO FIXME NOTE XXX |
+            \ highlight clear Todo | highlight link Todo DiagnosticUnderlineWarn
 
-" show all the tabs in the file visually underlined
-command TabHighlight syntax match Tab /\t/ | highlight link Tab Underlined
+command! TabHighlight syntax match Tab /\t/ | highlight link Tab Underlined
 
 set wildignore+=**/node_modules/**,**/venv/**,**/__pycache__/**,**/dist/**,**/build/**,**/target/**
 
@@ -84,11 +83,11 @@ endfunction
 
 " keep default grepprg if not inside git dir, otherwise switch to git grep
 if IsGitWorkTree()
-    set grepprg=git\ grep\ -n\ $*
+    set grepprg=git\ grep\ -n
 elseif executable('rg')
     set grepprg=rg\ --vimgrep "I don't want the uu thing.
 else
-    set grepprg=grep\ -HIn\ $*\ /dev/null
+    set grepprg=grep\ -HIn
 endif
 
 function! Grep(...)
@@ -107,12 +106,12 @@ augroup Quickfix
     au WinEnter * if winnr('$') == 1 && &buftype == "quickfix"|q|endif
 augroup END
 
-silent !mkdir -p ~/.cache/nvim/sessions
 function! GetSessionFile()
     let l:branch = substitute(system("git rev-parse --abbrev-ref HEAD 2>/dev/null"), '\n\+$', '', '')
     if l:branch != ''
         return "./.git/session" . ":" . l:branch . ".vim"
     else
+        silent !mkdir -p ~/.cache/nvim/sessions
         return "~/.cache/nvim/sessions/" . substitute(expand('%:p:h'), '/', '_', 'g') . '.vim'
     endif
 endfunction
@@ -134,17 +133,9 @@ nnoremap <leader>e <Cmd>Neotree toggle<CR>
 nnoremap <leader>ff <Cmd>FzfLua files<CR>
 nnoremap <leader>b <Cmd>ls<CR>:b <Right>
 
-lua << EOF
-vim.api.nvim_create_user_command('Diagnostics', function(opts)
-    vim.diagnostic.setqflist({
-        open = true,
-        severity = { min = tonumber(opts.args) or vim.diagnostic.severity.HINT }
-    })
-end, { nargs = '?' })
-vim.keymap.set('n', 'L', vim.diagnostic.open_float)
-EOF
+nnoremap L <Cmd>lua vim.diagnostic.open_float()<CR>
 
-nmap gd <C-]>
+nmap gd <c-]>
 nnoremap gy <Cmd>lua vim.lsp.buf.type_definition()<CR>
 noremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
 inoremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
@@ -175,17 +166,21 @@ end)
 EOF
 
 lua << EOF
--- Flash search for any text
-vim.keymap.set({ 'n', 'x', 'o' }, 's', function() require('flash').jump({ jump = { pos = "end" } }) end)
--- select labelled treesitter node(s)
-vim.keymap.set({ 'n', 'x', 'o' }, 'S', function() require('flash').treesitter() end)
--- jump to labelled treesitter node
-vim.keymap.set({ 'n', 'x', 'o' }, 'Q', function() require('flash').treesitter({ jump = { pos = "end" } }) end)
--- apply action in remote location e.g yr<flash search>iw and it restores cursor back here and you can paste iw can be
--- any text-object thing, and can also be a treesitter query, so like S and then you select a treesitter node.
-vim.keymap.set({ 'o' }, 'r', function() require('flash').remote() end)
--- toggle for using flash-like search in regular / search
-vim.keymap.set({ 'c' }, '<c-s>', function() require('flash').toggle() end)
+local kinds = {
+    { jump = { pos = "end", offset = 1 } },
+    { jump = { pos = "start" } },
+    { jump = { pos = "range" } },
+}
+local kind_index = 0
+vim.keymap.set({ 'n', 'x', 'o' }, 's', function() require('flash').jump(kinds[kind_index + 1]) end)
+vim.keymap.set({ 'n', 'x', 'o' }, 'S', function() require('flash').treesitter(kinds[kind_index + 1]) end)
+vim.keymap.set({ 'o' }, 'r', function() require('flash').remote(kinds[kind_index + 1]) end)
+vim.keymap.set({'n', 'x', 'o'}, '<C-s>', function()
+    kind_index = (kind_index + 1) % #kinds
+    vim.opt.cmdheight, vim.opt.showcmdloc = 1, "last"
+    vim.notify(kinds[kind_index + 1].jump.pos)
+    vim.defer_fn(function() vim.opt.cmdheight, vim.opt.showcmdloc  = 0, "statusline" end, 1000)
+end)
 EOF
 
 lua << EOF
@@ -215,7 +210,7 @@ require("lsp-file-operations").setup {}
 local capabilities = vim.lsp.protocol.make_client_capabilities() -- TODO: get rid of this once its part of neovim
 capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true -- TODO: remove this once its the default
 capabilities = vim.tbl_deep_extend('force', capabilities, require'lsp-file-operations'.default_capabilities())
-for _, lsp in ipairs({ "pylsp", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls" }) do
+for _, lsp in ipairs({ "pyright", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls" }) do
     require 'lspconfig'[lsp].setup {capabilities}
 end
 EOF
@@ -263,18 +258,36 @@ let g:linefly_options = {
 
 tnoremap <expr> <C-r> '<C-\><C-N>"'.nr2char(getchar()).'pi'
 
+lua <<EOF
+if not vim.g.loaded_scrollview_gitsigns then
+    vim.g.loaded_scrollview_gitsigns = true
+    require('scrollview.contrib.gitsigns').setup()
+end
+EOF
+
+lua require'completion' require'signature_help'
+
+lua require('goto-preview').setup { default_mappings = true }
+
+command! -nargs=+ WithIsk call WithIsk(<f-args>)
+function! WithIsk(add_chars, remove_chars, cmd)
+    let l:orig_isk = &isk
+    exe 'setl isk+=' . a:add_chars . ' isk-=' . a:remove_chars . ' | ' . a:cmd
+    let &isk = l:orig_isk
+endfunction
+
+inoremap <C-del> <C-o>de | inoremap <C-bs> <C-w>
+
 " TODO consider https://github.com/tomtom/tinykeymap_vim
-" TODO set fzf-lua up as required
-" Need to figure out how to send selected items only to quickfix list
+" TODO set fzf-lua up as required - see how to do something in the middle of the default and the max-perf
 " TODO fix document symbols thing: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1584
 " TODO add call hierarchy to neotree as well: https://github.com/nvim-neo-tree/neo-tree.nvim/issues/1277
-" TODO nvim-treesitter-textobjects
-" TODO yank history in FZF
 " TODO undotree in neo-tree
-" TODO completion -- nearly done
+" TODO nvim-treesitter-textobjects
+" TODO figure out the stupid tag thing...
+" TODO just need a thing to move around treesitter nodes if textobjects isn't enough for a generic thing
+" TODO yank history in FZF?
 " TODO multiple cursors
-" TODO flash/leap/hop/syntax-tree-surfer/whatever, choose the right combination
-" TODO fallback to grep if rg doesn't exist, make the logic like --- if grepprg is currently rg, remove -uu option
-" TODO make a HTML LSP that forwards to css lsp and js lsp, or even embeds
-" them if needs be
+" TODO make a HTML LSP that forwards to css lsp and js lsp, or even embeds them if needs be
 " TODO use fzf_exec in some nice way and also complete=true in some nice way
+" TODO cleanup plugins and arrange init.vim nicely
