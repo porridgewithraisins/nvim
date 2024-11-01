@@ -95,9 +95,7 @@ function! Grep(...)
 endfunction
 
 command! -nargs=+ -complete=file_in_path -bar Grep cgetexpr Grep(<f-args>)
-
-cnoreabbrev <expr> grep  (getcmdtype() ==# ':' && getcmdline() ==# 'grep')  ? 'Grep'  : 'grep'
-
+cnoreabbrev <expr> grep (getcmdtype() ==# ':' && getcmdline() ==# 'grep') ? 'Grep'  : 'grep'
 nmap <leader>g :Grep <c-r><c-w><CR>
 
 augroup Quickfix
@@ -135,10 +133,11 @@ nnoremap <leader>b <Cmd>ls<CR>:b <Right>
 
 nnoremap L <Cmd>lua vim.diagnostic.open_float()<CR>
 
-nmap gd <c-]>
-nnoremap gy <Cmd>lua vim.lsp.buf.type_definition()<CR>
-noremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
-inoremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
+nmap gd <Cmd>lua vim.lsp.buf.definition({ reuse_win = true })<CR>
+nmap grr <Cmd>lua vim.lsp.buf.references({ reuse_win = true })<CR>
+nmap gri <Cmd>lua vim.lsp.buf.implementation({ reuse_win = true })<CR>
+nmap gy <Cmd>lua vim.lsp.buf.type_definition({ reuse_win = true })<CR>
+noremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR> | inoremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
 nnoremap ]c :if &diff <Bar> execute 'normal! ]c' <Bar> else <Bar> silent execute 'Gitsigns next_hunk' <Bar> endif<CR>
 nnoremap [c :if &diff <Bar> execute 'normal! [c' <Bar> else <Bar> silent execute 'Gitsigns prev_hunk' <Bar> endif<CR>
 
@@ -146,13 +145,7 @@ lua << EOF
 require('bqf').setup { preview = { auto_preview = false } }
 require("quicker").setup({
     keys = {
-        {
-            "R",
-            function()
-                require("quicker").refresh()
-            end,
-            desc = "Refresh quickfix list from source",
-        },
+        { "R", function() require("quicker").refresh() end },
     },
 })
 vim.keymap.set('n', '<leader>q', function()
@@ -162,7 +155,6 @@ vim.keymap.set('n', '<leader>q', function()
         require 'quicker'.open({ min_height = 10, focus = true })
     end
 end)
-
 EOF
 
 lua << EOF
@@ -233,8 +225,7 @@ noremap <M-j> 4j | noremap <M-k> 4k | noremap <M-l> 4l | noremap <M-h> 4h
 set dictionary=/usr/share/dict/words thesaurus=~/.config/nvim/thesaurus.txt
 inoremap <c-u> <c-g>u<c-u> | inoremap <c-w> <c-g>u<c-w>
 
-" better window resizing, just do c-w >>>>>>>> keyboard smash! instead of c-w
-" everytime. TODO - explore tinykeymap here
+" TODO - explore tinykeymap here
 nmap <C-W>+ <C-W>+<SID>ws | nmap <C-W>- <C-W>-<SID>ws
 nmap <C-W>> <C-W>><SID>ws | nmap <C-W>< <C-W><<SID>ws
 nnoremap <script> <SID>ws+ 10<C-W>+<SID>ws | nnoremap <script> <SID>ws- 10<C-W>-<SID>ws
@@ -243,7 +234,8 @@ nmap <SID>ws <Nop>
 
 command! -bang QA if tabpagenr('$') > 1 | exec 'tabclose<bang>' | else | exec 'qa<bang>' | endif
 command! -bang QAA exec 'qa<bang>'
-cnoreabbrev <expr> qa 'QA'
+cnoreabbrev qa QA
+cnoreabbrev Q q
 
 command! -nargs=1 -complete=file WriteQF execute writefile([json_encode(getqflist({'all': 1}))], <f-args>)
 command! -nargs=1 -complete=file ReadQF call setqflist([], ' ', json_decode(get(readfile(<f-args>), 0, '')))
@@ -265,8 +257,6 @@ if not vim.g.loaded_scrollview_gitsigns then
 end
 EOF
 
-lua require'completion' require'signature_help'
-
 lua require('goto-preview').setup { default_mappings = true }
 
 command! -nargs=+ WithIsk call WithIsk(<f-args>)
@@ -277,6 +267,127 @@ function! WithIsk(add_chars, remove_chars, cmd)
 endfunction
 
 inoremap <C-del> <C-o>de | inoremap <C-bs> <C-w>
+
+lua << EOF
+if vim.g.loaded_lsp_auto_complete then return end
+vim.g.loaded_lsp_auto_complete = true
+
+local ffi = require 'ffi'
+ffi.cdef [[ bool pum_visible(); ]]
+local pumvisible = ffi.C.pum_visible
+
+vim.b.current_lsp_signature_help = 0
+vim.b.lsp_signature_help_manual_mode = false
+
+local original_convert_signature_help_to_markdown_lines = vim.lsp.util.convert_signature_help_to_markdown_lines
+local function my_convert_signature_help_to_markdown_lines(signature_help, ft, triggers)
+    if vim.b.lsp_signature_manual_mode then
+        if #signature_help.signatures > 0 then
+            vim.b.current_signature = vim.b.current_signature % #signature_help.signatures
+        end
+        signature_help.activeSignature = vim.b.current_signature
+    else
+        vim.b.current_signature = signature_help.activeSignature
+    end
+    for i, signature in ipairs(signature_help.signatures) do
+        signature.label = signature.label .. "  (" .. i .. "/" .. #signature_help.signatures .. ")"
+        if type(signature.documentation) == 'string' then
+            signature.documentation = signature.documentation .. "\n\n**Current Parameter**\n"
+        else
+            signature.documentation.value = signature.documentation.value .. "\n\n**Current Parameter**\n"
+        end
+    end
+    return original_convert_signature_help_to_markdown_lines(signature_help, ft, triggers)
+end
+vim.lsp.util.convert_signature_help_to_markdown_lines = my_convert_signature_help_to_markdown_lines
+
+vim.api.nvim_create_autocmd('LspAttach', {
+    callback = function(args)
+        vim.lsp.completion.enable(true, args.data.client_id, args.buf, { autotrigger = true })
+        vim.api.nvim_create_autocmd('CompleteChanged', {
+            buffer = args.buf,
+            callback = function()
+                local info = vim.fn.complete_info({ 'selected' })
+
+                local completionItem = vim.tbl_get(vim.v.completed_item, 'user_data', 'nvim', 'lsp', 'completion_item')
+                if completionItem == nil then return end
+
+                local resolvedItem = vim.lsp.buf_request_sync(
+                    args.buf,
+                    vim.lsp.protocol.Methods.completionItem_resolve,
+                    completionItem,
+                    500
+                )
+                if resolvedItem == nil then return end
+
+                local docs = vim.tbl_get(resolvedItem[args.data.client_id], 'result', 'documentation', 'value')
+                if docs == nil then return end
+
+                local winData = vim.api.nvim__complete_set(info['selected'], { info = docs })
+                if not winData.winid or not vim.api.nvim_win_is_valid(winData.winid) then return end
+
+                vim.api.nvim_win_set_config(winData.winid, { border = 'rounded' })
+                vim.treesitter.start(winData.bufnr, 'markdown')
+                vim.wo[winData.winid].conceallevel = 3
+            end
+        })
+
+        local client = vim.lsp.get_client_by_id(args.data.client_id)
+        local completionTriggers = vim.tbl_get(client, 'server_capabilities', 'completionProvider', 'triggerCharacters') or
+        {}
+        local signatureHelpTriggers = vim.tbl_get(client, 'server_capabilities', 'signatureHelpProvider',
+            'triggerCharacters') or {}
+        local signatureHelpRetriggers = vim.tbl_get(client, 'server_capabilities',
+            'signatureHelpProvider', 'retriggerCharacters') or {}
+
+        function close_signature_help()
+            local winid = vim.F.npcall(vim.api.nvim_buf_get_var, args.buf, 'lsp_floating_preview')
+            vim.F.npcall(vim.api.nvim_win_close, winid, false)
+            vim.b.lsp_signature_manual_mode = false
+        end
+
+        vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
+            vim.lsp.handlers.signature_help,
+            { max_height = 150, max_width = 120, close_events = { 'InsertLeave', 'CursorMoved' }, anchor_bias = 'above', border = 'rounded' }
+        )
+
+        vim.api.nvim_create_autocmd({ 'InsertLeave', 'CursorMoved' },
+            { callback = function() vim.b.lsp_signature_manual_mode = false end })
+
+        vim.api.nvim_create_autocmd('InsertCharPre', {
+            buffer = args.buf,
+            callback = function()
+                if pumvisible() then return end
+                if vim.v.char:match('[%w_]') and not vim.list_contains(completionTriggers, vim.v.char) then
+                    vim.lsp.completion.trigger()
+                end
+                if vim.list_contains(signatureHelpTriggers, vim.v.char) then
+                    vim.schedule(close_signature_help)
+                    vim.schedule(vim.lsp.buf.signature_help)
+                end
+                if vim.list_contains(signatureHelpRetriggers, vim.v.char) then
+                    vim.schedule(close_signature_help)
+                end
+            end,
+        })
+
+        local function nav_signature_help(dir)
+            vim.b.current_signature = vim.b.current_signature + dir
+            close_signature_help()
+            vim.b.lsp_signature_manual_mode = true
+            vim.lsp.buf.signature_help()
+        end
+
+        vim.keymap.set('i', '<C-S-j>', function() nav_signature_help(1) end)
+        vim.keymap.set('i', '<C-S-k>', function() nav_signature_help(-1) end)
+        vim.keymap.set('i', '<Tab>', function() return vim.fn.pumvisible() == 1 and '<C-n>' or '<Tab>' end,
+            { expr = true })
+        vim.keymap.set('i', '<S-Tab>', function() return vim.fn.pumvisible() == 1 and '<C-p>' or '<S-Tab>' end,
+            { expr = true })
+        vim.keymap.set('i', '<CR>', function() return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>' end, { expr = true })
+    end
+})
+EOF
 
 " TODO consider https://github.com/tomtom/tinykeymap_vim
 " TODO set fzf-lua up as required - see how to do something in the middle of the default and the max-perf
