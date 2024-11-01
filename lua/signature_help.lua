@@ -35,7 +35,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
         end
         local function close_signature_help()
             local winid = get_signature_help_window()
-            if winid and true or false then
+            if winid ~= nil then
                 vim.api.nvim_win_close(winid, false)
             end
             vim.b.lsp_signature_manual_mode = false
@@ -43,16 +43,18 @@ vim.api.nvim_create_autocmd('LspAttach', {
 
         vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
             vim.lsp.handlers.signature_help,
-            { max_height = 80, max_width = 80, close_events = { 'InsertLeave' } }
+            { max_height = 80, max_width = 80, close_events = { 'InsertLeave', 'CursorMoved' }, anchor_bias = 'above' }
         )
 
-        vim.api.nvim_create_autocmd('InsertLeave', { callback = function() vim.b.lsp_signature_manual_mode = false end })
+        vim.api.nvim_create_autocmd({ 'InsertLeave', 'CursorMoved' },
+            { callback = function() vim.b.lsp_signature_manual_mode = false end })
 
         vim.api.nvim_create_autocmd('TextChangedI', {
             group = lsp_complete_group,
             pattern = '<buffer>',
             callback = function()
                 local client = vim.lsp.get_client_by_id(args.data.client_id)
+                if not client then return end
                 local signatureHelpTriggers = vim.tbl_get(client, 'server_capabilities', 'signatureHelpProvider',
                     'triggerCharacters') or {}
                 local signatureHelpRetriggers = vim.tbl_get(client, 'server_capabilities',
@@ -72,7 +74,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
         })
 
         local function next_signature_help(keys)
-            if get_signature_help_window() and true or false then
+            if get_signature_help_window() ~= nil then
                 vim.b.current_signature = vim.b.current_signature + 1
                 close_signature_help()
                 vim.b.lsp_signature_manual_mode = true
@@ -83,8 +85,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
         end
 
         local function prev_signature_help(keys)
-            if get_signature_help_window() and true or false then
-                vim.b.lsp_signature_manual_mode = true
+            if get_signature_help_window() ~= nil then
                 vim.b.current_signature = vim.b.current_signature - 1
                 close_signature_help()
                 vim.b.lsp_signature_manual_mode = true
