@@ -5,7 +5,8 @@ augroup General | au! | augroup END
 set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block shiftround
 set smartcase ignorecase infercase undofile nowrap nospell pumblend=10 cmdheight=0 showcmdloc=statusline spelloptions+=camel
 set expandtab shiftwidth=4 softtabstop=4 inccommand=split
-let g:loaded_python3_provider = 0 | let g:loaded_ruby_provider = 0 | let g:loaded_netrwPlugin = 1 | let g:loaded_netrw = 1
+let g:loaded_python3_provider = 0 | let g:loaded_ruby_provider = 0 | let g:loaded_node_provider = 0 | let g:loaded_perl_provider = 0
+let g:loaded_netrwPlugin = 1 | let g:loaded_netrw = 1
 au General BufReadPost *
             \ if index(['gitcommit', 'gitrebase', 'log'], &filetype) == -1 && line("'\"") > 0 && line("'\"") <= line("$") |
             \   exe "normal g'\"" |

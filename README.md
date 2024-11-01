@@ -7,8 +7,8 @@ In progress.
  - add more textobjects (treesitter based, my own delimiters, etc)
  - vimtex, emmet in opt: figure out the emmet remove tag bug
  - document symbols bug in neotree
- - lsp completion + signature help keybinds, autocmds
- - setup fzf-lua profile
+ - setup fzf-lua, gitsigns profile
+ - reevaluate nvim-bqf
  - multiple-cursors setup
 
  - Clean up plugins / sort them
@@ -25,6 +25,9 @@ You need to install `cmake` and `make` (they are surely available for your syste
 
 Neovim's only dynamically linked dependencies are libuv and glibc. libuv is a dependency of cmake and is thus already
 covered. glibc is obviously covered.
+
+- You will need the clipboard provider for your platform (`xclip` on linux) installed for neovim to be able to copy and
+  paste to the system clipboard.
 
 These standalone CLI utilities enhance the experience and you probably will do well having them anyway, they are quite
 useful.
@@ -96,7 +99,7 @@ Editing wise:
  - Tree-sitter integrated very well everywhere.
 
 LSP:
- - Uses the inbuilt LSP (and inbuilt completion?).
+ - Uses the inbuilt LSP (and inbuilt completion, and inbuilt LSP signature).
 
 Debugger:
  - Has nvim-dap, no GUI though, not a fan of dap-ui yet and also don't think stuffing a GUI debugger into vim is the
