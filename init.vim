@@ -4,7 +4,7 @@ augroup General | au! | augroup END
 
 set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block shiftround
 set smartcase ignorecase infercase undofile nowrap nospell pumblend=10 cmdheight=0 showcmdloc=statusline spelloptions+=camel
-set expandtab shiftwidth=4 softtabstop=4
+set expandtab shiftwidth=4 softtabstop=4 inccommand=split
 let g:loaded_python3_provider = 0 | let g:loaded_ruby_provider = 0 | let g:loaded_netrwPlugin = 1 | let g:loaded_netrw = 1
 au General BufReadPost *
             \ if index(['gitcommit', 'gitrebase', 'log'], &filetype) == -1 && line("'\"") > 0 && line("'\"") <= line("$") |
@@ -178,7 +178,7 @@ vim.keymap.set({ 'o' }, 'r', function() require('flash').remote(kinds[kind_index
 vim.keymap.set({'n', 'x', 'o'}, '<C-s>', function()
     kind_index = (kind_index + 1) % #kinds
     vim.opt.cmdheight, vim.opt.showcmdloc = 1, "last"
-    vim.notify(kinds[kind_index + 1].jump.pos)
+    vim.notify('Flash mode: ' .. kinds[kind_index + 1].jump.pos)
     vim.defer_fn(function() vim.opt.cmdheight, vim.opt.showcmdloc  = 0, "statusline" end, 1000)
 end)
 EOF
@@ -291,3 +291,4 @@ inoremap <C-del> <C-o>de | inoremap <C-bs> <C-w>
 " TODO make a HTML LSP that forwards to css lsp and js lsp, or even embeds them if needs be
 " TODO use fzf_exec in some nice way and also complete=true in some nice way
 " TODO cleanup plugins and arrange init.vim nicely
+" TODO incremental LSP rename / g/ / norm. ideas, also show in upto x buffers in multiple preview windows?
