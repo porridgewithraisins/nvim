@@ -88,3 +88,6 @@
 [submodule "pack/plugins/start/goto-preview"]
 	path = pack/plugins/start/goto-preview
 	url = https://github.com/rmagatti/goto-preview
+[submodule "pack/plugins/start/nvim-scrollview"]
+	path = pack/plugins/start/nvim-scrollview
+	url = https://github.com/dstein64/nvim-scrollview
