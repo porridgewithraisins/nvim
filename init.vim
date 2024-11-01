@@ -35,7 +35,8 @@ command! -nargs=1 SetSpaces setlocal shiftwidth=<args> softtabstop=<args>
 colorscheme catppuccin
 au General VimEnter,Syntax *
             \ syntax keyword Todo TODO FIXME NOTE XXX |
-            \ highlight clear Todo | highlight link Todo DiagnosticUnderlineWarn
+            \ highlight clear Todo | highlight link Todo DiagnosticUnderlineWarn |
+            \ highlight WinSeparator guifg=Bold
 
 command! TabHighlight syntax match Tab /\t/ | highlight link Tab Underlined
 
@@ -203,7 +204,10 @@ local capabilities = vim.lsp.protocol.make_client_capabilities() -- TODO: get ri
 capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true -- TODO: remove this once its the default
 capabilities = vim.tbl_deep_extend('force', capabilities, require'lsp-file-operations'.default_capabilities())
 for _, lsp in ipairs({ "pyright", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls" }) do
-    require 'lspconfig'[lsp].setup {capabilities}
+    if not vim.g["idempotent_loaded_lsp_"..lsp] then
+        require'lspconfig'[lsp].setup {capabilities}
+        vim.g["idempotent_loaded_lsp_"..lsp] = true
+    end
 end
 EOF
 
@@ -240,7 +244,7 @@ cnoreabbrev Q q
 command! -nargs=1 -complete=file WriteQF execute writefile([json_encode(getqflist({'all': 1}))], <f-args>)
 command! -nargs=1 -complete=file ReadQF call setqflist([], ' ', json_decode(get(readfile(<f-args>), 0, '')))
 
-set completeopt=menu,fuzzy,menuone,popup,noinsert,noselect
+set completeopt=menu,fuzzy,popup,noinsert,noselect
 
 let g:linefly_options = {
     \ 'winbar': v:true,
@@ -251,8 +255,9 @@ let g:linefly_options = {
 tnoremap <expr> <C-r> '<C-\><C-N>"'.nr2char(getchar()).'pi'
 
 lua <<EOF
-if not vim.g.loaded_scrollview_gitsigns then
-    vim.g.loaded_scrollview_gitsigns = true
+vim.g.scrollview_excluded_filetypes = { 'neo-tree' }
+vim.g.scrollview_current_only = true
+if not vim.g.loaded_scrollview then
     require('scrollview.contrib.gitsigns').setup()
 end
 EOF
@@ -380,13 +385,14 @@ vim.api.nvim_create_autocmd('LspAttach', {
 
         vim.keymap.set('i', '<C-S-j>', function() nav_signature_help(1) end)
         vim.keymap.set('i', '<C-S-k>', function() nav_signature_help(-1) end)
-        vim.keymap.set('i', '<Tab>', function() return vim.fn.pumvisible() == 1 and '<C-n>' or '<Tab>' end,
-            { expr = true })
-        vim.keymap.set('i', '<S-Tab>', function() return vim.fn.pumvisible() == 1 and '<C-p>' or '<S-Tab>' end,
-            { expr = true })
-        vim.keymap.set('i', '<CR>', function() return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>' end, { expr = true })
     end
 })
+
+vim.keymap.set('i', '<Tab>', function() return vim.fn.pumvisible() == 1 and '<C-n>' or '<Tab>' end,
+    { expr = true })
+vim.keymap.set('i', '<S-Tab>', function() return vim.fn.pumvisible() == 1 and '<C-p>' or '<S-Tab>' end,
+    { expr = true })
+vim.keymap.set('i', '<CR>', function() return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>' end, { expr = true })
 EOF
 
 " TODO consider https://github.com/tomtom/tinykeymap_vim
