@@ -74,6 +74,7 @@ EOF
 
 xnoremap in :<C-u>call VisualNumber()<CR> | onoremap in :<C-u>normal vin<CR>
 xnoremap ih :<C-u>Gitsigns select_hunk<CR> | onoremap ih :<C-u>Gitsigns select_hunk<CR>
+cnoreabbrev git Git
 
 function! IsGitWorkTree()
   let l:stdout = system("git rev-parse --git-dir 2> /dev/null")
