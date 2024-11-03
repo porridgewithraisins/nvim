@@ -4,7 +4,8 @@ augroup General | au! | augroup END
 
 set number relativenumber cursorline signcolumn=yes laststatus=3 lazyredraw splitbelow splitright virtualedit=block shiftround
 set smartcase ignorecase infercase undofile nowrap nospell pumblend=10 cmdheight=0 showcmdloc=statusline spelloptions+=camel
-set expandtab shiftwidth=4 softtabstop=4 inccommand=split
+set expandtab shiftwidth=4 softtabstop=4 inccommand=split switchbuf+=usetab nrformats+=alpha scrolloff=4
+set path+=** wildignore+=**/node_modules/**,**/venv/**,**/__pycache__/**,**/dist/**,**/build/**,**/target/**
 let g:loaded_python3_provider = 0 | let g:loaded_ruby_provider = 0 | let g:loaded_node_provider = 0 | let g:loaded_perl_provider = 0
 let g:loaded_netrwPlugin = 1 | let g:loaded_netrw = 1
 au General BufReadPost *
@@ -24,9 +25,7 @@ au General TermOpen * startinsert
 set nofoldenable foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr() foldtext=v:lua.vim.treesitter.foldtext()
 lua << EOF
 require("nvim-treesitter.configs").setup({
-    auto_install = true,
-    highlight = { enable = true },
-    indent = { enable = true },
+    auto_install = true, highlight = { enable = true }, indent = { enable = true },
 })
 EOF
 
@@ -40,8 +39,6 @@ au General VimEnter,Syntax *
             \ highlight WinSeparator guifg=Bold
 
 command! TabHighlight syntax match Tab /\t/ | highlight link Tab Underlined
-
-set wildignore+=**/node_modules/**,**/venv/**,**/__pycache__/**,**/dist/**,**/build/**,**/target/**
 
 " leader key to space
 let mapleader = " "
@@ -104,7 +101,7 @@ nmap <leader>g :Grep <c-r><c-w><CR>
 augroup Quickfix
     au!
     au QuickFixCmdPost [^l]* cwindow | setlocal ma
-    au WinEnter * if winnr('$') == 1 && &buftype == "quickfix"|q|endif
+    au WinEnter * if winnr('$') == 2 && &buftype == "quickfix"|q|endif
 augroup END
 
 function! GetSessionFile()
@@ -137,8 +134,6 @@ nnoremap <leader>b <Cmd>ls<CR>:b <Right>
 nnoremap L <Cmd>lua vim.diagnostic.open_float()<CR>
 
 nmap gd <Cmd>lua vim.lsp.buf.definition({ reuse_win = true })<CR>
-nmap grr <Cmd>lua vim.lsp.buf.references({ reuse_win = true })<CR>
-nmap gri <Cmd>lua vim.lsp.buf.implementation({ reuse_win = true })<CR>
 nmap gy <Cmd>lua vim.lsp.buf.type_definition({ reuse_win = true })<CR>
 noremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR> | inoremap <c-f> <Cmd>lua vim.lsp.buf.format()<CR>
 nnoremap ]c :if &diff <Bar> execute 'normal! ]c' <Bar> else <Bar> silent execute 'Gitsigns next_hunk' <Bar> endif<CR>
@@ -191,7 +186,7 @@ require('neo-tree').setup {
     },
     sources = { "filesystem", "buffers", "git_status", "document_symbols" },
     source_selector = {
-        statusline = true,
+        winbar = true,
         sources = {
             { source = "filesystem" }, { source = "buffers" }, { source = "git_status" }, { source = "document_symbols" },
         },
@@ -205,7 +200,7 @@ require("lsp-file-operations").setup {}
 local capabilities = vim.lsp.protocol.make_client_capabilities() -- TODO: get rid of this once its part of neovim
 capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true -- TODO: remove this once its the default
 capabilities = vim.tbl_deep_extend('force', capabilities, require'lsp-file-operations'.default_capabilities())
-for _, lsp in ipairs({ "pyright", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls" }) do
+for _, lsp in ipairs({ "pyright", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls", "html" }) do -- TODO: make LSPs configurable
     if not vim.g["idempotent_loaded_lsp_"..lsp] then
         require'lspconfig'[lsp].setup {capabilities}
         vim.g["idempotent_loaded_lsp_"..lsp] = true
@@ -283,8 +278,9 @@ local ffi = require 'ffi'
 ffi.cdef [[ bool pum_visible(); ]]
 local pumvisible = ffi.C.pum_visible
 
-vim.b.current_lsp_signature_help = 0
+vim.b.current_signature = 0
 vim.b.lsp_signature_help_manual_mode = false
+local signature_timer = vim.loop.new_timer()
 
 local original_convert_signature_help_to_markdown_lines = vim.lsp.util.convert_signature_help_to_markdown_lines
 local function my_convert_signature_help_to_markdown_lines(signature_help, ft, triggers)
@@ -296,12 +292,15 @@ local function my_convert_signature_help_to_markdown_lines(signature_help, ft, t
     else
         vim.b.current_signature = signature_help.activeSignature
     end
-    for i, signature in ipairs(signature_help.signatures) do
-        signature.label = signature.label .. "  (" .. i .. "/" .. #signature_help.signatures .. ")"
-        if type(signature.documentation) == 'string' then
-            signature.documentation = signature.documentation .. "\n\n**Current Parameter**\n"
-        else
-            signature.documentation.value = signature.documentation.value .. "\n\n**Current Parameter**\n"
+    local curr_signature = signature_help.signatures[signature_help.activeSignature + 1]
+    if curr_signature then
+        if curr_signature.label ~= nil then
+            curr_signature.label = curr_signature.label .. "  (" .. (signature_help.activeSignature + 1) .. "/" .. #signature_help.signatures .. ")"
+        end
+        if type(curr_signature.documentation) == 'string' then
+            curr_signature.documentation = "**@param**"
+        elseif curr_signature.documentation ~= nil then
+            curr_signature.documentation.value = "**@param**"
         end
     end
     return original_convert_signature_help_to_markdown_lines(signature_help, ft, triggers)
@@ -347,8 +346,12 @@ vim.api.nvim_create_autocmd('LspAttach', {
         local signatureHelpRetriggers = vim.tbl_get(client, 'server_capabilities',
             'signatureHelpProvider', 'retriggerCharacters') or {}
 
+        function get_signature_help_window()
+            return vim.F.npcall(vim.api.nvim_buf_get_var, args.buf, 'lsp_floating_preview')
+        end
+
         function close_signature_help()
-            local winid = vim.F.npcall(vim.api.nvim_buf_get_var, args.buf, 'lsp_floating_preview')
+            local winid = get_signature_help_window()
             vim.F.npcall(vim.api.nvim_win_close, winid, false)
             vim.b.lsp_signature_manual_mode = false
         end
@@ -368,21 +371,39 @@ vim.api.nvim_create_autocmd('LspAttach', {
                 if vim.v.char:match('[%w_]') and not vim.list_contains(completionTriggers, vim.v.char) then
                     vim.lsp.completion.trigger()
                 end
-                if vim.list_contains(signatureHelpTriggers, vim.v.char) then
-                    vim.schedule(close_signature_help)
-                    vim.schedule(vim.lsp.buf.signature_help)
-                end
-                if vim.list_contains(signatureHelpRetriggers, vim.v.char) then
-                    vim.schedule(close_signature_help)
-                end
             end,
+        })
+
+        vim.api.nvim_create_autocmd('CursorMovedI', {
+            buffer = args.buf,
+            callback = function()
+                local line = vim.api.nvim_get_current_line()
+                local cursor = vim.api.nvim_win_get_cursor(0)[2]
+                local last_char = line:sub(cursor, cursor)
+
+                if vim.list_contains(signatureHelpTriggers, last_char) then
+                    signature_timer:stop()
+                    local delay = get_signature_help_window() == nil and 0 or 100
+                    signature_timer:start(delay, 0, vim.schedule_wrap(function() close_signature_help() vim.lsp.buf.signature_help() end))
+                end
+
+                if vim.list_contains(signatureHelpRetriggers, last_char) then
+                    signature_timer:stop()
+                    close_signature_help()
+                end
+            end
         })
 
         local function nav_signature_help(dir)
             vim.b.current_signature = vim.b.current_signature + dir
-            close_signature_help()
-            vim.b.lsp_signature_manual_mode = true
-            vim.lsp.buf.signature_help()
+            signature_timer:stop()
+            vim.schedule(
+                function()
+                    close_signature_help()
+                    vim.b.lsp_signature_manual_mode = true
+                    vim.lsp.buf.signature_help()
+                end
+            )
         end
 
         vim.keymap.set('i', '<C-S-j>', function() nav_signature_help(1) end)
@@ -396,6 +417,10 @@ vim.keymap.set('i', '<S-Tab>', function() return vim.fn.pumvisible() == 1 and '<
     { expr = true })
 vim.keymap.set('i', '<CR>', function() return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>' end, { expr = true })
 EOF
+
+let g:user_emmet_leader_key='<C-Z>' | let g:user_emmet_mode='a' | imap <C-Z>N <Esc><C-Z>N
+map * <Plug>(asterisk-z*) | map # <Plug>(asterisk-z#) | map g* <Plug>(asterisk-gz*) | map g# <Plug>(asterisk-gz#)
+let g:asterisk#keeppos = 1
 
 " TODO consider https://github.com/tomtom/tinykeymap_vim
 " TODO set fzf-lua up as required - see how to do something in the middle of the default and the max-perf
