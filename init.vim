@@ -200,7 +200,7 @@ require("lsp-file-operations").setup {}
 local capabilities = vim.lsp.protocol.make_client_capabilities() -- TODO: get rid of this once its part of neovim
 capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true -- TODO: remove this once its the default
 capabilities = vim.tbl_deep_extend('force', capabilities, require'lsp-file-operations'.default_capabilities())
-for _, lsp in ipairs({ "pyright", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls", "html" }) do -- TODO: make LSPs configurable
+for _, lsp in ipairs({ "pylsp", "gopls", "ts_ls", "ccls", "bashls", "marksman", "texlab", "lua_ls", "html" }) do -- TODO: make LSPs configurable
     if not vim.g["idempotent_loaded_lsp_"..lsp] then
         require'lspconfig'[lsp].setup {capabilities}
         vim.g["idempotent_loaded_lsp_"..lsp] = true
@@ -292,6 +292,7 @@ local function my_convert_signature_help_to_markdown_lines(signature_help, ft, t
     else
         vim.b.current_signature = signature_help.activeSignature
     end
+    if signature_help.activeSignature == nil then signature_help.activeSignature = 0 end
     local curr_signature = signature_help.signatures[signature_help.activeSignature + 1]
     if curr_signature then
         if curr_signature.label ~= nil then
@@ -358,7 +359,10 @@ vim.api.nvim_create_autocmd('LspAttach', {
 
         vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
             vim.lsp.handlers.signature_help,
-            { max_height = 150, max_width = 120, close_events = { 'InsertLeave', 'CursorMoved' }, anchor_bias = 'above', border = 'rounded' }
+            {
+                    max_height = 150, max_width = 120, anchor_bias = 'above', border = 'rounded',
+                    close_events = { 'InsertLeave', 'CursorMoved' }, focus = false,
+            }
         )
 
         vim.api.nvim_create_autocmd({ 'InsertLeave', 'CursorMoved' },
